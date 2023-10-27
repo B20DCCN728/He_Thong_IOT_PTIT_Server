@@ -20,7 +20,11 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.MessagingException;
+import org.springframework.messaging.handler.annotation.Header;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 // Configure MQTT connection to broker (localhost:1883)
@@ -126,7 +130,7 @@ public class MQTTConfiguration {
                         mqttClientFactory()
                 );
         messageHandler.setAsync(true);
-        messageHandler.setDefaultTopic("#");
+        messageHandler.setDefaultTopic("tro/esp/led/led_1");
         return messageHandler;
     }
 
