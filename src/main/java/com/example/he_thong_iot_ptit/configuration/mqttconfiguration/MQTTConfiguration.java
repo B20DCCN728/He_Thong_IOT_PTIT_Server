@@ -1,6 +1,9 @@
 package com.example.he_thong_iot_ptit.configuration.mqttconfiguration;
 
+import com.example.he_thong_iot_ptit.model.Sensor;
+import com.example.he_thong_iot_ptit.repository.TemperatureRepository;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.annotation.MessagingGateway;
@@ -23,6 +26,9 @@ import java.util.Objects;
 // Configure MQTT connection to broker (localhost:1883)
 @Configuration
 public class MQTTConfiguration {
+
+    @Autowired
+    TemperatureRepository temperatureRepository;
 
     //    @Bean
     //    public MqttPahoClientFactory mqttClientFactory() {
@@ -74,6 +80,7 @@ public class MQTTConfiguration {
         return adapter;
     }
 
+
     @Bean
     @ServiceActivator(inputChannel = "mqttInputChannel")
     public MessageHandler handler() {
@@ -81,11 +88,29 @@ public class MQTTConfiguration {
             @Override
             public void handleMessage(Message<?> message) throws MessagingException {
                 String topic = Objects.requireNonNull(message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC)).toString();
-//                if(topic.equals("tro/esp/dht/temperature")) {
-//                    System.out.println("topic 1 is " + topic);
-//                }
-
-                System.out.println(message.getPayload());
+                switch (topic) {
+                    case "tro/esp/dht/temperature":
+                        System.out.print("Received message from temperature: " + topic);
+                        break;
+                    case "tro/esp/dht/humidity":
+                        System.out.print("Received message from humidity: " + topic);
+                        break;
+                    case "tro/esp/lm393/lightvalue":
+                        System.out.print("Received message from lightvalue: " + topic);
+                        break;
+                    case "tro/esp/lm393/voltage":
+                        System.out.print("Received message from voltage: " + topic);
+                        break;
+                    default:
+                        topic = "Unknown topic";
+                        System.out.print("Unknown topic");
+                }
+//                System.out.println("Received message from topic: " + topic);
+                String payload = message.getPayload().toString();
+                System.out.println(" " + payload);
+                Sensor sensor = new Sensor();
+                sensor.setValue(Double.parseDouble(payload));
+                temperatureRepository.save(sensor);
             }
         };
     }
