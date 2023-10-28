@@ -44,6 +44,7 @@ public class MQTTConfiguration {
     //        factory.setConnectionOptions(options);
     //        return factory;
     //    }
+
     @Bean
     public MqttPahoClientFactory mqttClientFactory() {
         DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
