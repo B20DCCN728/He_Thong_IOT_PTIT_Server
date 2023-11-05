@@ -5,14 +5,33 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+import java.time.LocalDateTime;
+
 @Entity
-@Table(name = "Temperature")
+@Table(name = "Sensor")
+@AllArgsConstructor()
+@NoArgsConstructor
+@Data
 public class Sensor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    private double value;
+    private LocalDateTime timeStamp;
+    private double temperature;
+    private double humidity;
+    private double lightValue;
+    private double voltage;
+    public Sensor(
+            LocalDateTime timeStamp,
+            double temperature,
+            double humidity,
+            double lightValue,
+            double voltage
+    ) {
+        this.timeStamp = timeStamp;
+        this.temperature = temperature;
+        this.humidity = humidity;
+        this.lightValue = lightValue;
+        this.voltage = voltage;
+    }
 }

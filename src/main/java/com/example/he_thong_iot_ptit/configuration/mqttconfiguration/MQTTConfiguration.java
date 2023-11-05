@@ -1,7 +1,8 @@
 package com.example.he_thong_iot_ptit.configuration.mqttconfiguration;
 
 import com.example.he_thong_iot_ptit.model.Sensor;
-import com.example.he_thong_iot_ptit.repository.TemperatureRepository;
+import com.example.he_thong_iot_ptit.repository.DeviceRespository;
+import com.example.he_thong_iot_ptit.repository.SensorRepository;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -20,36 +21,40 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.MessagingException;
-import org.springframework.messaging.handler.annotation.Header;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
+import java.time.LocalDateTime;
+
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
+
 
 // Configure MQTT connection to broker (localhost:1883)
 @Configuration
 public class MQTTConfiguration {
+    // Define current time
+    private LocalDateTime currentTime;
+
+    // Define date time formatter
+    private DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    // Define Simp Message SendingOperations
+    @Autowired
+    private SimpMessageSendingOperations simpMessageSendingOperations;
 
     @Autowired
-    TemperatureRepository temperatureRepository;
+    SensorRepository sensorRepository;
 
-    //    @Bean
-    //    public MqttPahoClientFactory mqttClientFactory() {
-    //        DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
-    //        MqttConnectOptions options = new MqttConnectOptions();
-    //        options.setServerURIs(new String[] { "tcp://host1:1883", "tcp://host2:1883" });
-    //        options.setUserName("username");
-    //        options.setPassword("password".toCharArray());
-    //        factory.setConnectionOptions(options);
-    //        return factory;
-    //    }
+    @Autowired
+    DeviceRespository deviceRespository;
 
+    // Configure MQTT connection to broker (localhost:1883)
     @Bean
     public MqttPahoClientFactory mqttClientFactory() {
         DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
         MqttConnectOptions options = new MqttConnectOptions();
 
+        //Define connection options
         options.setServerURIs(new String[]{"tcp://localhost:1883"});
 
         options.setCleanSession(true);
@@ -61,7 +66,7 @@ public class MQTTConfiguration {
 
     // Configure inbound channel adapter to receive messages from broker
     @Bean
-    public MessageChannel mqttInputChannel() {
+    public MessageChannel sensorMqttInputChannel() {
         return new DirectChannel();
     }
 
@@ -71,79 +76,112 @@ public class MQTTConfiguration {
                 new MqttPahoMessageDrivenChannelAdapter(
                         "serverIn",
                         mqttClientFactory(),
-                        "tro/esp/dht/temperature",
-                        "tro/esp/dht/humidity",
-                        "tro/esp/lm393/lightvalue",
-                        "tro/esp/lm393/voltage"
-
+                        "tro/esp/sensor_data"
         );
 
         adapter.setCompletionTimeout(5000);
         adapter.setConverter(new DefaultPahoMessageConverter());
         adapter.setQos(1);
-        adapter.setOutputChannel(mqttInputChannel());
+        adapter.setOutputChannel(sensorMqttInputChannel());
         return adapter;
     }
 
-
+    // Configure message handler to process messages from sensorMqttInputChannel
     @Bean
-    @ServiceActivator(inputChannel = "mqttInputChannel")
+    @ServiceActivator(inputChannel = "sensorMqttInputChannel")
     public MessageHandler handler() {
         return new MessageHandler() {
             @Override
-            public void handleMessage(Message<?> message) throws MessagingException {
+            public void handleMessage(Message<?> message) throws MessagingException, NullPointerException {
                 String topic = Objects.requireNonNull(message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC)).toString();
-                switch (topic) {
-                    case "tro/esp/dht/temperature":
-                        System.out.print("Received message from temperature: " + topic);
-                        break;
-                    case "tro/esp/dht/humidity":
-                        System.out.print("Received message from humidity: " + topic);
-                        break;
-                    case "tro/esp/lm393/lightvalue":
-                        System.out.print("Received message from lightvalue: " + topic);
-                        break;
-                    case "tro/esp/lm393/voltage":
-                        System.out.print("Received message from voltage: " + topic);
-                        break;
-                    default:
-                        topic = "Unknown topic";
-                        System.out.print("Unknown topic");
+                if(topic.equals("tro/esp/sensor_data")) {
+                    // Get current time
+                    currentTime = LocalDateTime.now();
+
+                    // Get payload from message and split it into an array of strings
+                    String [] payload = message
+                            .getPayload()
+                            .toString()
+                            .trim()
+                            .split("\\s+");
+
+                    // Create a new sensor object
+                    Sensor sensor = new Sensor(
+                            currentTime,
+                            Double.parseDouble(payload[0]),
+                            Double.parseDouble(payload[1]),
+                            Double.parseDouble(payload[2]),
+                            Double.parseDouble(payload[3])
+                    );
+
+                    // Save sensor object to database
+                    sensorRepository.save(sensor);
+
+                    System.out.println(sensor);
+
+                    simpMessageSendingOperations.convertAndSend("/sensor", sensor);
+
+                    // Setting for Websocket to send data to client
+
                 }
-//                System.out.println("Received message from topic: " + topic);
-                String payload = message.getPayload().toString();
-                System.out.println(" " + payload);
-                Sensor sensor = new Sensor();
-                sensor.setValue(Double.parseDouble(payload));
-                temperatureRepository.save(sensor);
+                else System.out.println("Topic: " + topic + " Payload: " + message.getPayload());
             }
         };
     }
 
-    //Configure outbound channel adapter to send messages to broker
-
+    // LED
+    //Configure outbound channel adapter to send led messages to broker
     @Bean
-    @ServiceActivator(inputChannel = "mqttOutboundChannel")
-    public MessageHandler mqttOutbound() {
+    @ServiceActivator(inputChannel = "ledMqttOutboundChannel")
+    public MessageHandler ledMqttOutbound() {
         MqttPahoMessageHandler messageHandler =
                 new MqttPahoMessageHandler(
                         "serverOut",
                         mqttClientFactory()
                 );
         messageHandler.setAsync(true);
-        messageHandler.setDefaultTopic("tro/esp/led/led_1");
+        messageHandler.setDefaultTopic("tro/esp/led");
         return messageHandler;
     }
 
+    // Configure led outbound channel
     @Bean
-    public MessageChannel mqttOutboundChannel() {
+    public MessageChannel ledMqttOutboundChannel() {
         return new DirectChannel();
     }
 
-    @MessagingGateway(defaultRequestChannel = "mqttOutboundChannel")
-    public interface MyGateway {
+    // Define gateway interface for led
+    @MessagingGateway(defaultRequestChannel = "ledMqttOutboundChannel")
+    public interface MyLedGateway {
 
         void sendToMqtt(String data);
 
+    }
+
+    // FAN
+    //Configure outbound channel adapter to send fan messages to broker
+    @Bean
+    @ServiceActivator(inputChannel = "fanMqttOutboundChannel")
+    public MessageHandler fanMqttOutbound() {
+        MqttPahoMessageHandler messageHandler = new MqttPahoMessageHandler(
+                "serverIn",
+                mqttClientFactory()
+        );
+        messageHandler.setAsync(true);
+        messageHandler.setDefaultTopic("tro/esp/fan");
+
+        return messageHandler;
+    }
+
+    // Define fan Outbound channel
+    @Bean
+    public MessageChannel fanMqttOutboundChannel() {
+        return new DirectChannel();
+    }
+
+    // Define gateway interface for fan
+    @MessagingGateway(defaultRequestChannel = "fanMqttOutboundChannel")
+    public interface MyFanGateway {
+        void sendToMqtt(String data);
     }
 }

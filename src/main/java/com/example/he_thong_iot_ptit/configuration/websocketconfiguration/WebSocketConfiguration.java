@@ -15,6 +15,7 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer 
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry
                 .addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
                 .withSockJS();
     }
 
@@ -23,6 +24,6 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer 
         registry
                 .setApplicationDestinationPrefixes("/app");
         registry
-                .enableSimpleBroker("/topic");
+                .enableSimpleBroker("/sensor");
     }
 }

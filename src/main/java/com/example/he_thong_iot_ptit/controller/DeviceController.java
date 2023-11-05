@@ -11,18 +11,22 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-@RestController()
+@RestController
 public class DeviceController {
 
     @Autowired
-    MQTTConfiguration.MyGateway myGateway;
+    MQTTConfiguration.MyFanGateway myFanGateway;
 
-    @PostMapping("/sendMessage")
-    public ResponseEntity<?> publish(@RequestBody String message) {
+    @Autowired
+    MQTTConfiguration.MyLedGateway myLedGateway;
+
+    // Control Fan
+    @PostMapping("/fan-device")
+    public ResponseEntity<?> controlFan(@RequestBody String message) {
         try {
             JsonObject convertObject = new Gson().fromJson(message, JsonObject.class);
             System.out.println(convertObject.get("message").toString());
-            myGateway.sendToMqtt(convertObject.get("message").getAsString());
+            myFanGateway.sendToMqtt(convertObject.get("message").getAsString());
             return ResponseEntity.ok("Success");
         }
         catch (Exception e) {
@@ -30,4 +34,20 @@ public class DeviceController {
             return ResponseEntity.badRequest().body("Error");
         }
     }
+
+    // Control Led
+    @PostMapping("/led-device")
+    public ResponseEntity<?> controlLed(@RequestBody String message) {
+        try {
+            JsonObject convertObject = new Gson().fromJson(message, JsonObject.class);
+            System.out.println(convertObject.get("message").toString());
+            myLedGateway.sendToMqtt(convertObject.get("message").getAsString());
+            return ResponseEntity.ok("Success");
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Error");
+        }
+    }
+
 }
