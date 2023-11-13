@@ -57,7 +57,7 @@ public class MQTTConfiguration {
         //Define connection options
         options.setServerURIs(new String[]{"tcp://localhost:1883"});
 
-        options.setCleanSession(true);
+        options.setCleanSession(false);
 
         factory.setConnectionOptions(options);
 
@@ -136,7 +136,7 @@ public class MQTTConfiguration {
     public MessageHandler ledMqttOutbound() {
         MqttPahoMessageHandler messageHandler =
                 new MqttPahoMessageHandler(
-                        "serverOut",
+                        "serverOut_1",
                         mqttClientFactory()
                 );
         messageHandler.setAsync(true);
@@ -164,7 +164,7 @@ public class MQTTConfiguration {
     @ServiceActivator(inputChannel = "fanMqttOutboundChannel")
     public MessageHandler fanMqttOutbound() {
         MqttPahoMessageHandler messageHandler = new MqttPahoMessageHandler(
-                "serverIn",
+                "serverOut_2",
                 mqttClientFactory()
         );
         messageHandler.setAsync(true);
