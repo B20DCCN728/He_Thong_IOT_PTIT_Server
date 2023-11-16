@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Entity
@@ -16,7 +17,7 @@ public class Device {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    private Date timeStamp;
+    private LocalDateTime timeStamp;
     private String deviceName;
     private String state;
 }

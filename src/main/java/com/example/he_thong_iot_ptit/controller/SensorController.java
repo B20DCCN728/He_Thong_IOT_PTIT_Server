@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Collections;
 
 @RestController
 public class SensorController {
@@ -16,7 +17,9 @@ public class SensorController {
 
     @GetMapping("/getAllSensorData")
     public List<Sensor> getAllSensorData() {
-        return sensorRepository.findAll();
+        List<Sensor> sensorData = sensorRepository.findAll();
+        Collections.reverse(sensorData);
+        return sensorData;
     }
 
 
